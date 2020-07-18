@@ -1,0 +1,10 @@
+{
+  "folders": [
+    {
+      "path": "."
+    }
+  ],
+  "settings": {
+    "eslint.workingDirectories": ["./library-frontend"]
+  }
+}
