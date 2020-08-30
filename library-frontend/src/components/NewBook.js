@@ -3,7 +3,7 @@ import { useMutation } from "@apollo/client";
 
 import { ADD_BOOK, ALL_BOOKS, ALL_AUTHORS } from "../queries";
 
-const NewBook = (props) => {
+const NewBook = ({ show, setError }) => {
   const [title, setTitle] = useState("");
   const [author, setAuhtor] = useState("");
   const [published, setPublished] = useState("");
@@ -12,9 +12,17 @@ const NewBook = (props) => {
 
   const [addBook] = useMutation(ADD_BOOK, {
     refetchQueries: [{ query: ALL_BOOKS }, { query: ALL_AUTHORS }],
+    onError: (error) => {
+      if (error.graphQLErrors.length > 0) {
+        setError(error.graphQLErrors[0].message);
+      }
+      if (error.networkError) {
+        setError(error.networkError.message);
+      }
+    },
   });
 
-  if (!props.show) {
+  if (!show) {
     return null;
   }
 
@@ -45,6 +53,7 @@ const NewBook = (props) => {
           <input
             value={title}
             onChange={({ target }) => setTitle(target.value)}
+            required
           />
         </div>
         <div>
@@ -52,6 +61,7 @@ const NewBook = (props) => {
           <input
             value={author}
             onChange={({ target }) => setAuhtor(target.value)}
+            required
           />
         </div>
         <div>
@@ -60,6 +70,7 @@ const NewBook = (props) => {
             type="number"
             value={published}
             onChange={({ target }) => setPublished(target.value)}
+            required
           />
         </div>
         <div>
