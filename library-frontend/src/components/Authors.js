@@ -63,6 +63,13 @@ const AuthorBirthYearForm = ({ authors }) => {
     setYear("");
   };
 
+  useEffect(() => {
+    // set first value as a
+    if (authors.length > 0) {
+      setName(authors[0].name);
+    }
+  }, [authors]);
+
   return (
     <div>
       <form onSubmit={submit}>

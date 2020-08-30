@@ -1,5 +1,25 @@
+require("dotenv").config();
+
 const { ApolloServer, gql } = require("apollo-server");
 const { v1: uuid } = require("uuid");
+
+const Author = require("./models/author");
+const Book = require("./models/book");
+
+const mongoose = require("mongoose");
+mongoose.set("useFindAndModify", false);
+
+const MONGODB_URI = process.env.MONGODB_URI;
+console.log("connecting to", MONGODB_URI);
+
+mongoose
+  .connect(MONGODB_URI, { useNewUrlParser: true })
+  .then(() => {
+    console.log("connected to MongoDB");
+  })
+  .catch((error) => {
+    console.log("error connection to MongoDB:", error.message);
+  });
 
 let authors = [
   {
@@ -87,9 +107,10 @@ let books = [
 const typeDefs = gql`
   type Book {
     title: String!
-    author: String!
+    author: Author!
     published: Int!
-    genres: [String]
+    genres: [String]!
+    id: ID!
   }
 
   type Author {
@@ -112,57 +133,59 @@ const typeDefs = gql`
       published: Int!
       genres: [String]!
     ): Book
+    addAuthor(name: String!, born: Int): Author
     editAuthor(name: String, setBornTo: Int): Author
   }
 `;
 
 const resolvers = {
   Query: {
-    authorCount: () => authors.length,
-    bookCount: () => books.length,
-    allBooks: (root, args) => {
-      if (!args.author && !args.genre) {
-        return books;
+    authorCount: () => Author.collection.countDocuments(),
+    bookCount: () => Book.collection.countDocuments(),
+    allBooks: async (root, args) => {
+      let query = Book.find({}).populate("author", { name: 1, born: 1 });
+
+      if (args.author) {
+        const author = await Author.find({ name: args.author });
+        query = query.find({ author });
+      }
+      if (args.genre) {
+        query = query.find({ genres: { $in: args.genre } });
       }
 
-      const filterByAuthor = (book) =>
-        args.author ? book.author === args.author : true;
-      const filterByGenre = (book) =>
-        args.genre ? book.genres.some((genre) => genre === args.genre) : true;
-
-      return books.filter(filterByAuthor).filter(filterByGenre);
+      return query;
     },
-    allAuthors: () => authors,
+    allAuthors: () => Author.find({}),
   },
   Author: {
-    bookCount: (root) =>
-      books.filter((book) => book.author === root.name).length,
+    bookCount: async (root) => {
+      const author = await Author.find({ name: root.name });
+      return Book.find({ author }).countDocuments();
+    },
   },
   Mutation: {
-    addBook: (root, args) => {
-      const { author } = args;
-
-      const book = { ...args, id: uuid() };
-      const existingAuthor = authors.find((a) => a.name === author);
-      if (!existingAuthor) {
-        authors = authors.concat({ name: author, id: uuid() });
-      }
-
-      books = books.concat(book);
-      return book;
+    addBook: async (root, args) => {
+      const author = await Author.findOneAndUpdate(
+        { name: args.author },
+        { name: args.author },
+        { new: true, upsert: true }
+      );
+      const book = new Book({ ...args, author });
+      return book.save();
     },
-    editAuthor: (root, args) => {
+    addAuthor: (root, args) => {
+      const author = new Author({ ...args });
+      return author.save();
+    },
+    editAuthor: async (root, args) => {
       const { name, setBornTo } = args;
 
-      const author = authors.find((a) => a.name === name);
-      if (!author) {
-        return null;
-      }
-      const updatedAuthor = { ...author, born: setBornTo };
-      authors = authors.map((a) =>
-        a.id === updatedAuthor.id ? updatedAuthor : a
+      const author = await Author.findOneAndUpdate(
+        { name: name },
+        { born: setBornTo },
+        { new: true }
       );
-      return updatedAuthor;
+      return author;
     },
   },
 };
