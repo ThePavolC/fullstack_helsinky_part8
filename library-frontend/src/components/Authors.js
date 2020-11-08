@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@apollo/client";
 
 import { ALL_AUTHORS, EDIT_AUTHOR } from "../queries";
 
-const Authors = ({ show, setError }) => {
+const Authors = ({ token, show, setError }) => {
   const result = useQuery(ALL_AUTHORS);
   const [authors, setAuthors] = useState([]);
 
@@ -36,10 +36,11 @@ const Authors = ({ show, setError }) => {
           ))}
         </tbody>
       </table>
-      <>
+      {token &&
+      <div>
         <h3>Set birthyear</h3>
         <AuthorBirthYearForm authors={authors} setError={setError} />
-      </>
+      </div>}
     </div>
   );
 };
@@ -50,6 +51,9 @@ const AuthorBirthYearForm = ({ authors, setError }) => {
 
   const [editAuthor] = useMutation(EDIT_AUTHOR, {
     refetchQueries: [{ query: ALL_AUTHORS }],
+    onCompleted: () => {
+      setError(null);
+    },
     onError: (error) => {
       setError(error.graphQLErrors[0].message);
     },
