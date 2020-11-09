@@ -3,15 +3,32 @@ import { useQuery } from "@apollo/client";
 
 import { ALL_BOOKS } from "../queries";
 
+const ALL_GENRES = "all genres"
+
+const GenreButton = ({genre, setSelectedGenre}) => {
+  const onGenreClick = (e) => {
+    setSelectedGenre(genre)
+  }
+
+  return <button onClick={onGenreClick}>{genre}</button>;
+}
+
 const Books = (props) => {
-  const result = useQuery(ALL_BOOKS);
   const [books, setBooks] = useState([]);
+  const [allGenres, setAllGenres] = useState([]);
+  const [selectedGenre, setSelectedGenre] = useState(ALL_GENRES);
+  const result = useQuery(ALL_BOOKS, {variables: {genre: selectedGenre}});
 
   useEffect(() => {
     if (!result.loading) {
       setBooks(result.data.allBooks);
+      if (allGenres.every(g => g === ALL_GENRES)) {
+        const genres = new Set();
+        books.map(book => book.genres.map(genre => genres.add(genre)))
+        setAllGenres([...genres])
+      }
     }
-  }, [result]);
+  }, [allGenres, books, result]);
 
   if (!props.show) {
     return null;
@@ -20,6 +37,8 @@ const Books = (props) => {
   return (
     <div>
       <h2>books</h2>
+
+      {selectedGenre && <>selected genre <b>{selectedGenre}</b></>}
 
       <table>
         <tbody>
@@ -35,6 +54,16 @@ const Books = (props) => {
               <td>{book.published}</td>
             </tr>
           ))}
+          <tr>
+            <td>
+              {allGenres &&
+              allGenres.map(
+                genre => <GenreButton key={genre} genre={genre} setSelectedGenre={setSelectedGenre}/>
+                )
+              }
+              <GenreButton key="all" genre={ALL_GENRES} setSelectedGenre={setSelectedGenre}/>
+            </td>
+          </tr>
         </tbody>
       </table>
     </div>

@@ -87,7 +87,7 @@ const resolvers = {
         const author = await Author.find({ name: args.author });
         query = query.find({ author });
       }
-      if (args.genre) {
+      if (args.genre && args.genre !== 'all genres') {
         query = query.find({ genres: { $in: args.genre } });
       }
 
