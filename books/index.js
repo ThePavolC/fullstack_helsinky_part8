@@ -20,6 +20,9 @@ mongoose.set("useFindAndModify", false);
 
 const MONGODB_URI = process.env.MONGODB_URI;
 
+const { PubSub } = require('apollo-server')
+const pubsub = new PubSub()
+
 mongoose
   .connect(MONGODB_URI, { useNewUrlParser: true })
   .then(() => {
@@ -73,6 +76,10 @@ const typeDefs = gql`
     editAuthor(name: String, setBornTo: Int): Author
     createUser(username: String!, favoriteGenre: String!): User
     login(username: String!, password: String!): Token
+  }
+
+  type Subscription {
+    bookAdded: Book!
   }
 `;
 
@@ -131,6 +138,8 @@ const resolvers = {
         });
       }
 
+      pubsub.publish('BOOK_ADDED', { bookAdded: newBook })
+
       return newBook;
     },
     addAuthor: async (root, args) => {
@@ -184,6 +193,11 @@ const resolvers = {
       };
 
       return { value: jwt.sign(userForToken, JWT_SECRET) };
+    },
+  },
+  Subscription: {
+    bookAdded: {
+      subscribe: () => pubsub.asyncIterator(['BOOK_ADDED'])
     },
   },
 };
