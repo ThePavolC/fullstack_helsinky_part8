@@ -3,7 +3,7 @@ import { useMutation } from "@apollo/client";
 
 import { ADD_BOOK, ALL_BOOKS, ALL_AUTHORS } from "../queries";
 
-const NewBook = ({ show, setError }) => {
+const NewBook = ({ show, setError, updateCacheWith }) => {
   const [title, setTitle] = useState("");
   const [author, setAuhtor] = useState("");
   const [published, setPublished] = useState("");
@@ -20,6 +20,9 @@ const NewBook = ({ show, setError }) => {
         setError(error.networkError.message);
       }
     },
+    update: (store, response) => {
+      updateCacheWith(response.data.addBook)
+    }
   });
 
   if (!show) {
